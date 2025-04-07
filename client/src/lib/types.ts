@@ -6,7 +6,7 @@ export type UserRole = 'medewerker' | 'super_admin';
 // User Profile model
 export interface UserProfile {
   id: string;
-  email: string | null;
+  email?: string | null;
   full_name: string | null;
   role: UserRole;
   created_at?: string;
