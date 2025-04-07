@@ -1,0 +1,129 @@
+/* Optimalisatie van Tailwind basis, componenten en utilities */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* @tailwind variants; is meestal niet meer nodig met moderne Tailwind, verwijderd voor optimalisatie. Test dit! */
+
+/* Shadcn/UI kleuren en variabelen - Behoud zoals ze zijn voor thema consistentie */
+:root {
+  --radius: 0.625rem; /* 10px */
+  --background: oklch(1 0 0); /* Wit */
+  --foreground: oklch(0.129 0.042 264.695); /* Zeer donker paars/blauw */
+  --card: oklch(1 0 0); /* Wit */
+  --card-foreground: oklch(0.129 0.042 264.695); /* Zeer donker paars/blauw */
+  --popover: oklch(1 0 0); /* Wit */
+  --popover-foreground: oklch(0.129 0.042 264.695); /* Zeer donker paars/blauw */
+  --primary: oklch(0.208 0.042 265.755); /* Donker paars/blauw (primary button background) */
+  --primary-foreground: oklch(0.984 0.003 247.858); /* Bijna wit (primary button text) */
+  --secondary: oklch(0.968 0.007 247.896); /* Heel licht grijs/paars (secondary button background) */
+  --secondary-foreground: oklch(0.208 0.042 265.755); /* Donker paars/blauw (secondary button text) */
+  --muted: oklch(0.968 0.007 247.896); /* Heel licht grijs/paars */
+  --muted-foreground: oklch(0.554 0.046 257.417); /* Midden grijs/paars (muted text) */
+  --accent: oklch(0.968 0.007 247.896); /* Heel licht grijs/paars */
+  --accent-foreground: oklch(0.208 0.042 265.755); /* Donker paars/blauw */
+  --destructive: oklch(0.577 0.245 27.325); /* Rood/oranje (voor destructive actions) */
+  --border: oklch(0.929 0.013 255.508); /* Licht grijs/paars (border) */
+  --input: oklch(0.929 0.013 255.508); /* Licht grijs/paars (input border) */
+  --ring: oklch(0.704 0.04 256.788); /* Grijs/paars (focus ring) */
+}
+
+/* Dark theme variabelen - Toegepast wanneer <html> de class 'dark' heeft */
+.dark {
+  --background: oklch(0.129 0.042 264.695); /* Zeer donker paars/blauw */
+  --foreground: oklch(0.984 0.003 247.858); /* Bijna wit */
+  --card: oklch(0.208 0.042 265.755); /* Donker paars/blauw */
+  --card-foreground: oklch(0.984 0.003 247.858); /* Bijna wit */
+  --popover: oklch(0.208 0.042 265.755); /* Donker paars/blauw */
+  --popover-foreground: oklch(0.984 0.003 247.858); /* Bijna wit */
+  --primary: oklch(0.929 0.013 255.508); /* Licht grijs/paars (primary button background) */
+  --primary-foreground: oklch(0.208 0.042 265.755); /* Donker paars/blauw (primary button text) */
+  --secondary: oklch(0.279 0.041 260.031); /* Donkerder grijs/paars (secondary button background) */
+  --secondary-foreground: oklch(0.984 0.003 247.858); /* Bijna wit (secondary button text) */
+  --muted: oklch(0.279 0.041 260.031); /* Donkerder grijs/paars */
+  --muted-foreground: oklch(0.704 0.04 256.788); /* Grijs/paars (muted text) */
+  --accent: oklch(0.279 0.041 260.031); /* Donkerder grijs/paars */
+  --accent-foreground: oklch(0.984 0.003 247.858); /* Bijna wit */
+  --destructive: oklch(0.704 0.191 22.216); /* Rood/oranje (dark theme) */
+  --border: oklch(1 0 0 / 10%); /* Zeer donker grijs/transparant (border) */
+  --input: oklch(1 0 0 / 15%); /* Zeer donker grijs/transparant (input border) */
+  --ring: oklch(0.551 0.027 264.364); /* Midden paars (focus ring) */
+}
+
+/* Basis stijlen - Vereenvoudigd en gestroomlijnd */
+@layer base {
+  /* Reset en basis setup */
+  html, body {
+    height: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    border-width: 0; /* Onderdeel van Tailwind preflight/base, maar expliciet hier kan helpen bij resets */
+    border-style: solid;
+    border-color: theme('borderColor.DEFAULT', currentColor); /* Standaard Tailwind manier */
+  }
+
+  /* Font smoothing */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Body basis kleuren - Vertrouw op Tailwind utilities die de CSS vars gebruiken */
+  body {
+    @apply bg-background text-foreground;
+    /* De directe fallbacks zijn hier weggehaald; @apply gebruikt de vars die al fallbacks kunnen hebben of door PostCSS verwerkt worden */
+  }
+
+  /* Responsive basis font size - Behoud als dit de gewenste aanpak is */
+  html {
+    font-size: 16px; /* Standaard */
+
+    @media (min-width: 768px) { /* md breakpoint (default) */
+      font-size: 17px;
+    }
+
+    @media (min-width: 1024px) { /* lg breakpoint (default) */
+      font-size: 18px;
+    }
+  }
+}
+
+/* Verbeterde dropdown/popover styling voor betere mobiele weergave */
+@layer components {
+  /* Fix voor dropdown menu's op mobiel */
+  [data-slot="select-content"],
+  [role="menu"],
+  [data-radix-popper-content-wrapper] {
+    background-color: var(--card) !important;
+    color: var(--card-foreground) !important;
+    border-color: var(--border) !important;
+    z-index: 50;
+    border-width: 1px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Verbeterde input velden op mobiel */
+  input, 
+  select, 
+  textarea,
+  button {
+    @apply touch-manipulation; /* Verbetert touch target op iOS */
+  }
+}
+
+/* Utility classes voor mobiele optimalisatie */
+@layer utilities {
+  /* Voorkom dat text input laat inzoomen op mobiel */
+  .text-input-mobile {
+    font-size: 16px; /* 16px is minimum om iOS auto-zooming te voorkomen */
+  }
+  
+  /* Verbeterde scroll handling binnen containers */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
