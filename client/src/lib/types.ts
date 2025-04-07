@@ -9,8 +9,8 @@ export interface UserProfile {
   email?: string | null;
   full_name: string | null;
   role: UserRole;
-  created_at?: string;
-  updated_at?: string;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 // Incident Types met nieuwe velden
