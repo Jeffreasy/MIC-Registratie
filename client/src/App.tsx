@@ -7,7 +7,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import AnalyticsPage from './pages/AnalyticsPage';
-import AdminPage from './pages/AdminPage';
+import AdminPage from './pages/Adminpage';
 import ProfilePage from './pages/ProfilePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Header from './components/Header';
