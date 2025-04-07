@@ -82,7 +82,7 @@ const AdminPage: React.FC = () => {
           <TabButton tab="users" label="Gebruikers" />
         </div>
       </div>
-      
+
       {/* Tab content */}
       {activeTab === 'clients' && (
         <ClientsTab 

@@ -6,9 +6,11 @@ export type UserRole = 'medewerker' | 'super_admin';
 // User Profile model
 export interface UserProfile {
   id: string;
-  updated_at: string | null;
+  email: string | null;
   full_name: string | null;
   role: UserRole;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Incident Types met nieuwe velden
@@ -80,22 +82,18 @@ export interface IncidentLogWithRelations {
 
 // Voor de dagelijkse totalen
 export interface DailyTotal {
-  user_id: string;
-  client_id: string;
+  id: number;
   log_date: string;
-  incident_type_id: number;
-  category: string | null;
+  user_id: string;
   total_count: number;
 }
 
 // Voor de maandelijkse samenvatting
 export interface MonthlySummary {
+  id: number;
   month: string;
   user_id: string;
-  incident_type_id: number;
-  category: string | null;
-  unique_clients: number;
-  total_incidents: number;
+  total_count: number;
 }
 
 // Type voor gegroepeerde incidents per type
