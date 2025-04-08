@@ -8,6 +8,7 @@ import useProfileData from './hooks/useProfileData';
 import UserInfoCard from './components/UserInfoCard';
 import DebugSettingsCard from './components/DebugSettingsCard';
 import DebugInfoCard from './components/DebugInfoCard';
+import AccountSettingsCard from './components/AccountSettingsCard';
 
 const ProfilePage: React.FC = () => {
   const {
@@ -17,8 +18,13 @@ const ProfilePage: React.FC = () => {
     isUpdating,
     error,
     successMessage,
-    handleRoleChange
+    handleRoleChange,
+    handleProfileUpdate,
+    handlePasswordReset
   } = useProfileData();
+
+  // Check of gebruiker een super_admin is
+  const isSuperAdmin = role === 'super_admin';
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -33,25 +39,42 @@ const ProfilePage: React.FC = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        {/* Basisinformatie kaart is altijd zichtbaar */}
         <UserInfoCard 
           user={user}
           userProfile={userProfile}
           role={role}
         />
 
-        <DebugSettingsCard
-          role={role}
+        {/* Nieuwe account instellingen kaart - voor alle gebruikers */}
+        <AccountSettingsCard
+          user={user}
+          userProfile={userProfile}
+          onUpdateProfile={handleProfileUpdate}
+          onResetPassword={handlePasswordReset}
           isUpdating={isUpdating}
           error={error}
           successMessage={successMessage}
-          onRoleChange={handleRoleChange}
         />
 
-        <DebugInfoCard
-          user={user}
-          userProfile={userProfile}
-          role={role}
-        />
+        {/* Debug componenten alleen zichtbaar voor super_admin gebruikers */}
+        {isSuperAdmin && (
+          <>
+            <DebugSettingsCard
+              role={role}
+              isUpdating={isUpdating}
+              error={error}
+              successMessage={successMessage}
+              onRoleChange={handleRoleChange}
+            />
+
+            <DebugInfoCard
+              user={user}
+              userProfile={userProfile}
+              role={role}
+            />
+          </>
+        )}
       </div>
     </div>
   );

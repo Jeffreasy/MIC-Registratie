@@ -32,6 +32,7 @@ const HomePage: React.FC = () => {
     handleDeleteLog,
     handleUpdateLogCount,
     fetchTodaysLogs,
+    fetchData,
     formatTime
   } = useHomePageData(user?.id);
 
@@ -77,7 +78,7 @@ const HomePage: React.FC = () => {
                   onLocationChange={setSelectedLocation}
                   disabled={!!loggingIncidentId}
                 />
-              </div>
+      </div>
               
               {logError && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -92,11 +93,11 @@ const HomePage: React.FC = () => {
                   logSuccessId={logSuccessId}
                   onIncidentLog={handleIncidentLog}
                 />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
+            </div>
+          </CardContent>
+        </Card>
+                    </div>
+                    
         <div>
           <DailyLogs 
             dailyLogs={groupedDailyLogs}
@@ -104,12 +105,11 @@ const HomePage: React.FC = () => {
             editingLog={editingLog}
             onDeleteLog={handleDeleteLog}
             onUpdateLogCount={handleUpdateLogCount}
-            onRefresh={fetchTodaysLogs}
             formatTime={formatTime}
             isLoading={loadingLogs}
           />
-        </div>
-      </div>
+              </div>
+            </div>
     </div>
   );
 };

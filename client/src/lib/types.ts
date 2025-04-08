@@ -96,6 +96,16 @@ export interface MonthlySummary {
   total_count: number;
 }
 
+// Voor statistiek componenten
+export interface CategoryTotal {
+  category: string | null;
+  total_count: number;
+}
+
+export interface CountResult {
+  count: number;
+}
+
 // Type voor gegroepeerde incidents per type
 export interface IncidentTypeWithTotals {
   name: string;

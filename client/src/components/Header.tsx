@@ -12,11 +12,6 @@ const Header: React.FC = () => {
     await supabase.auth.signOut();
   };
 
-  // Debug informatie
-  console.log("Current role:", role);
-  console.log("Is Super Admin:", isSuperAdmin());
-  console.log("User Profile:", userProfile);
-
   return (
     <header className="bg-background border-b border-border">
       <div className="container mx-auto py-3 flex items-center justify-between">

@@ -1,5 +1,10 @@
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { 
+  BrowserRouter as Router, 
+  Routes, 
+  Route, 
+  Navigate
+} from 'react-router-dom';
 import { supabase } from './lib/supabaseClient';
 import { useAuthStore } from './store/authStore';
 import HomePage from './pages/Homepage';
@@ -67,7 +72,7 @@ const App = () => {
   }
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       {isAuthenticated && <Header />}
       <Routes>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />} />

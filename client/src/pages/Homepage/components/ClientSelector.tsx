@@ -35,11 +35,17 @@ const ClientSelector: React.FC<ClientSelectorProps> = ({
           <SelectValue placeholder="Kies een cliënt" />
         </SelectTrigger>
         <SelectContent>
-          {clients.map((client) => (
-            <SelectItem key={client.id} value={client.id}>
-              {client.full_name}
-            </SelectItem>
-          ))}
+          {clients.length === 0 ? (
+            <div className="px-2 py-1 text-sm text-muted-foreground">
+              Geen cliënten gevonden
+            </div>
+          ) : (
+            clients.map((client) => (
+              <SelectItem key={client.id} value={client.id}>
+                {client.full_name}
+              </SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
     </div>

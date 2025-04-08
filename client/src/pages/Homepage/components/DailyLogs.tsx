@@ -10,7 +10,6 @@ interface DailyLogsProps {
   editingLog: { id: number, count: number } | null;
   onDeleteLog: (id: number) => void;
   onUpdateLogCount: (id: number, count: number) => void;
-  onRefresh: () => void;
   formatTime: (time: string | null) => string;
   isLoading: boolean;
 }
@@ -21,7 +20,6 @@ const DailyLogs: React.FC<DailyLogsProps> = ({
   editingLog,
   onDeleteLog,
   onUpdateLogCount,
-  onRefresh,
   formatTime,
   isLoading
 }) => {
@@ -49,16 +47,6 @@ const DailyLogs: React.FC<DailyLogsProps> = ({
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg">Registraties vandaag</CardTitle>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="gap-1" 
-            onClick={onRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Verversen
-          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -86,7 +74,7 @@ const DailyLogs: React.FC<DailyLogsProps> = ({
                     )}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {log.client.full_name}
+                    {log.client?.full_name || 'Onbekende cliënt'}
                     {log.location && (
                       <span className="inline-flex items-center ml-3">
                         <MapPin className="h-3 w-3 mr-1" />

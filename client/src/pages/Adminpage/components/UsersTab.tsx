@@ -317,9 +317,11 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
               <Label htmlFor="user-email">Email</Label>
               <Input
                 id="user-email"
+                name="user-email"
                 value={newUserEmail}
                 onChange={(e) => setNewUserEmail(e.target.value)}
                 placeholder="naam@sheerenloo.nl"
+                aria-label="Email adres"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Als u geen domein invoert, wordt @sheerenloo.nl automatisch toegevoegd
@@ -330,6 +332,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
               <Select
                 value={newUserRole}
                 onValueChange={(value: any) => setNewUserRole(value)}
+                name="user-role"
               >
                 <SelectTrigger id="user-role" className="w-[140px]">
                   <SelectValue />
@@ -388,6 +391,9 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
                   setCurrentPage(1); // Reset paginering bij zoeken
                 }}
                 className="pl-8"
+                id="search-users"
+                name="search-users"
+                aria-label="Zoeken naar gebruikers"
               />
             </div>
           </div>
@@ -442,7 +448,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  currentUsers.map((user) => (
+                  currentUsers.map((user) => user && (
                     <TableRow key={user.id}>
                       <TableCell className="text-xs max-w-[100px] truncate font-mono">{user.id}</TableCell>
                       <TableCell>{user.email || '-'}</TableCell>
@@ -456,8 +462,9 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
                                 u.id === user.id ? { ...u, role: value } : u
                               ));
                             }}
+                            name={`edit-role-${user.id}`}
                           >
-                            <SelectTrigger className="w-[140px]">
+                            <SelectTrigger className="w-[140px]" id={`edit-role-trigger-${user.id}`}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -604,7 +611,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
             <DialogHeader>
               <DialogTitle>Gebruiker verwijderen</DialogTitle>
               <DialogDescription>
-                Weet u zeker dat u de gebruiker <strong>{userToDelete.full_name || userToDelete.email || userToDelete.id}</strong> wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+                Weet u zeker dat u de gebruiker <strong>{userToDelete?.full_name || userToDelete?.email || userToDelete?.id || 'Onbekend'}</strong> wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="flex space-x-2 justify-end">

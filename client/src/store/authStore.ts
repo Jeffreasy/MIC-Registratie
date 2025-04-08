@@ -19,6 +19,9 @@ interface AuthState {
   setSession: (session: any) => void;
   checkInitialSession: () => Promise<void>;
   updateUserRole: (userId: string, newRole: UserRole) => Promise<void>;
+  updateProfile: (userId: string, data: { full_name?: string }) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -38,8 +41,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return;
 
     try {
-      console.log("Loading user profile for:", user.id);
-      
       // Methode 1: Probeer eerst via de normale RLS-controlled weg
       const { data, error } = await supabase
         .from('profiles')
@@ -52,13 +53,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         
         // Methode 2: RPC functie aanroepen die RLS omzeilt (als beschikbaar)
         try {
-          console.log("Trying to get role via RPC function");
           const { data: rpcData, error: rpcError } = await supabase
             .rpc('get_user_role', { user_id: user.id });
             
           if (!rpcError && rpcData) {
-            console.log("Got role via RPC:", rpcData);
-            
             // Stel een minimaal profiel samen met alleen de rol
             const minimalProfile = {
               id: user.id,
@@ -72,7 +70,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               role: rpcData as UserRole 
             });
             
-            console.log("Profile set via RPC method");
             return;
           } else {
             console.warn("RPC method failed:", rpcError);
@@ -83,7 +80,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         
         // Methode 3: Tijdelijke hardcoded fix voor specifieke gebruiker (als alles faalt)
         if (user.id === '7ac71eb7-a166-4a20-8855-1c89fb84a0a4') {
-          console.log("Applying temporary fix for admin user");
           const adminProfile = {
             id: user.id,
             role: 'super_admin' as UserRole,
@@ -96,41 +92,66 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             role: 'super_admin' 
           });
           
-          console.log("Temporary admin role set:", {
-            role: 'super_admin',
-            isSuperAdmin: true
-          });
-          
           return;
         }
+        
+        // Fallback: Als alle methoden mislukken, stel default 'medewerker' rol in
+        // Dit zorgt ervoor dat de gebruiker tenminste basistoegang heeft, maar
+        // geen toegang tot gevoelige admin routes
+        const defaultProfile = {
+          id: user.id,
+          role: 'medewerker' as UserRole,
+          full_name: user.email?.split('@')[0] || null,
+          updated_at: null
+        };
+        
+        console.warn(`Geen rol gevonden voor gebruiker ${user.id}. Standaard 'medewerker' rol ingesteld.`);
+        set({
+          userProfile: defaultProfile,
+          role: 'medewerker'
+        });
         
         return;
       }
 
-      console.log("Loaded profile data:", data);
-      
       if (data) {
         const profile = data as UserProfile;
-        console.log("Setting user role to:", profile.role);
         
         set({ 
           userProfile: profile, 
           role: profile.role as UserRole 
         });
-        
-        // Controleer na het instellen wat de waarde is
-        setTimeout(() => {
-          const state = get();
-          console.log("Current state after setting role:", {
-            role: state.role,
-            isSuperAdmin: state.isSuperAdmin()
-          });
-        }, 0);
       } else {
         console.warn("No profile data found for user", user.id);
+        
+        // Ook hier: zorg voor een standaard rol indien geen data
+        const defaultProfile = {
+          id: user.id,
+          role: 'medewerker' as UserRole,
+          full_name: user.email?.split('@')[0] || null,
+          updated_at: null
+        };
+        
+        set({
+          userProfile: defaultProfile,
+          role: 'medewerker'
+        });
       }
     } catch (error) {
       console.error('Error in loadUserProfile:', error);
+      
+      // Bij onverwachte fouten, zorg voor een veilige fallback
+      const defaultProfile = {
+        id: user.id,
+        role: 'medewerker' as UserRole,
+        full_name: user.email?.split('@')[0] || null,
+        updated_at: null
+      };
+      
+      set({
+        userProfile: defaultProfile,
+        role: 'medewerker'
+      });
     }
   },
   setSession: (session) => {
@@ -151,7 +172,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         role: null,
         isAuthenticated: false
       });
-      console.log("Session reset, all user data cleared");
     }
   },
   checkInitialSession: async () => {
@@ -162,7 +182,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   updateUserRole: async (userId: string, newRole: UserRole) => {
     const state = get();
-    console.log(`Updating role for user ${userId} to ${newRole}`);
     
     try {
       // Update de rol in de database
@@ -178,7 +197,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Als het de huidige gebruiker is, update dan ook de rol in de store
       if (state.user && state.user.id === userId) {
         set({ role: newRole });
-        console.log(`Current user role updated to ${newRole} in store`);
         
         // Herlaad het volledige profiel om alle gegevens synchroon te houden
         await state.loadUserProfile();
@@ -188,6 +206,66 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       throw error;
     }
   },
+  
+  // Functie om gebruikersprofiel bij te werken (naam)
+  updateProfile: async (userId: string, data: { full_name?: string }) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(data)
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      // Als het de huidige gebruiker is, update dan ook het profiel in de store
+      if (get().user?.id === userId) {
+        // Werk alleen de bijgewerkte velden bij in de lokale state
+        set(state => ({
+          userProfile: {
+            ...state.userProfile!,
+            ...data,
+            updated_at: new Date().toISOString()
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  },
+  
+  // Functie om wachtwoord reset mail te versturen
+  resetPassword: async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error sending password reset:', error);
+      throw error;
+    }
+  },
+  
+  // Functie om uit te loggen
+  signOut: async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      // Reset gebruikersgegevens in de state
+      set({
+        user: null,
+        userProfile: null,
+        role: null,
+        isAuthenticated: false
+      });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      throw error;
+    }
+  }
 }));
 
 // Roep checkInitialSession direct aan wanneer de store wordt geladen
