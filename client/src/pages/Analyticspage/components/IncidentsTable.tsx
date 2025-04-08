@@ -11,7 +11,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 import { IncidentLogWithRelations } from '@/lib/types';
-import { nl } from 'date-fns/locale';
 
 interface IncidentsTableProps {
   logs: IncidentLogWithRelations[];
