@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabaseClient';
 
 const Header: React.FC = () => {
-  const { user, isSuperAdmin, role, userProfile } = useAuthStore();
+  const { user, isSuperAdmin, role } = useAuthStore();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

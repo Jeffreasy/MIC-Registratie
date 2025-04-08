@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Edit2, RefreshCw, MapPin, Clock, AlertTriangle } from "lucide-react";
+import { Trash2, Edit2, MapPin, Clock, AlertTriangle } from "lucide-react";
 import { IncidentLogWithRelations } from '@/lib/types';
 
 interface DailyLogsProps {
@@ -11,7 +11,6 @@ interface DailyLogsProps {
   onDeleteLog: (id: number) => void;
   onUpdateLogCount: (id: number, count: number) => void;
   formatTime: (time: string | null) => string;
-  isLoading: boolean;
 }
 
 const DailyLogs: React.FC<DailyLogsProps> = ({
@@ -20,8 +19,7 @@ const DailyLogs: React.FC<DailyLogsProps> = ({
   editingLog,
   onDeleteLog,
   onUpdateLogCount,
-  formatTime,
-  isLoading
+  formatTime
 }) => {
   const [countEdits, setCountEdits] = useState<{[key: number]: number}>({});
   

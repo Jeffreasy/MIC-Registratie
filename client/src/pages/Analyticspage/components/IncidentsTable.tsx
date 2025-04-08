@@ -20,7 +20,8 @@ interface IncidentsTableProps {
 const IncidentsTable: React.FC<IncidentsTableProps> = ({ logs }) => {
   // Format date consistently
   const formatDate = (dateString: string): string => {
-    return format(new Date(dateString), 'd MMMM yyyy', { locale: nl });
+    const date = new Date(dateString);
+    return format(date, 'd MMMM yyyy');
   };
 
   return (
