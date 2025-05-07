@@ -1,208 +1,51 @@
-# Testing Documentatie
+# Teststrategie en Uitvoering
 
-## Jest Setup
-```typescript
-// jest.config.ts
-export default {
-  preset: 'ts-jest',
-  testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
-  },
-  transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: 'tsconfig.test.json'
-    }]
-  },
-  coverageThreshold: {
-    global: {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80
-    }
-  }
-}
-```
+Voor configuratiebestanden zoals `jest.config.ts` en MSW/Cypress voorbeelden, zie de [hoofd README.md](./README.md).
 
-## Test Utilities
-```typescript
-// src/utils/test-utils.tsx
-import { render as rtlRender } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createClient } from '@supabase/supabase-js'
+## 1. Teststrategie Overzicht
+    - Soorten tests: Unit, Integratie, End-to-End (E2E).
+    - Doel en scope per testtype.
+    - Gebruikte tools:
+        - Unit/Integratie: Jest, React Testing Library, MSW
+        - E2E: Cypress
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
-})
+## 2. Unit Tests
+    - Focus: Individuele functies, utility's, geïsoleerde React component props/rendering.
+    - Uitvoering: `npm test -- <testbestandsnaam>`
+    - Mocks: `jest.fn()`, `jest.spyOn()`, handmatige mocks in `__mocks__` mappen.
 
-const mockSupabaseClient = createClient('mock-url', 'mock-key')
+## 3. Integratie Tests
+    - Focus: Interactie tussen componenten, state changes, context, hooks, en gemockte service/API calls.
+    - Voorbeeld: Testen van een formulier component inclusief state updates en de `onSubmit` call met gemockte API.
+    - Mock Service Worker (MSW) wordt gebruikt om HTTP requests naar Supabase en Edge Functions te onderscheppen en te mocken (zie `src/mocks/handlers.ts` in `README_huidig.md` voor voorbeelden).
+    - Uitvoering: `npm test -- <testbestandsnaam>`
 
-export function render(ui: React.ReactElement, options = {}) {
-  return rtlRender(ui, {
-    wrapper: ({ children }) => (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    ),
-    ...options,
-  })
-}
+## 4. End-to-End (E2E) Tests
+    - Focus: Volledige gebruikersflows door de live (of bijna-live) applicatie.
+    - Tool: Cypress.
+    - Setup: (Verwijs naar `cypress.config.ts` indien aanwezig, en hoe de dev server gestart moet worden).
+    - Voorbeeld E2E tests (zoals `auth.cy.ts` in `README_huidig.md`).
+    - Uitvoering:
+        ```bash
+        npm run cypress:open # (of het commando om Cypress UI te openen)
+        npm run cypress:run  # (of het commando om headless te draaien, bv. in CI)
+        ```
+    - Test Data Management voor E2E (bv. seeding, API calls in `beforeEach`).
 
-export * from '@testing-library/react'
-```
+## 5. Uitvoeren van Alle Tests
+    - `npm test` (draait alle Jest unit/integratie tests).
+    - Commando voor alle Cypress tests.
+    - Test coverage: `npm test -- --coverage`. Output is te vinden in de `coverage/` map.
 
-## Mock Service Worker Setup
-```typescript
-// src/mocks/handlers.ts
-import { rest } from 'msw'
+## 6. Mocking Strategie
+### 6.1. Supabase Client
+    - Voor unit/integratie tests kan de Supabase client gemockt worden (zie `src/utils/test-utils.tsx` voor een `mockSupabaseClient` voorbeeld).
+    - Voor tests die daadwerkelijke API calls simuleren, wordt MSW gebruikt.
+### 6.2. Edge Functions
+    - Gemockt via MSW (zie `Register` functie mock in `src/mocks/handlers.ts`).
+### 6.3. Authenticatie
+    - Testen van `ProtectedRoute` en auth-afhankelijke logica door de `authStore` te mocken of de responses van Supabase Auth via MSW te sturen.
 
-export const handlers = [
-  rest.post('/functions/v1/Register', (req, res, ctx) => {
-    return res(
-      ctx.json({
-        success: true,
-        userId: 'mock-user-id'
-      })
-    )
-  }),
-
-  rest.get('/rest/v1/profiles', (req, res, ctx) => {
-    return res(
-      ctx.json({
-        data: [
-          {
-            id: 'mock-id',
-            email: 'test@example.com',
-            role: 'medewerker'
-          }
-        ]
-      })
-    )
-  })
-]
-```
-
-## Example Test Cases
-```typescript
-// src/components/Auth/LoginForm.test.tsx
-import { render, screen, fireEvent, waitFor } from '@/utils/test-utils'
-import { LoginForm } from './LoginForm'
-
-describe('LoginForm', () => {
-  it('validates required fields', async () => {
-    render(<LoginForm onSubmit={jest.fn()} />)
-    
-    fireEvent.click(screen.getByRole('button', { name: /inloggen/i }))
-    
-    await waitFor(() => {
-      expect(screen.getByText(/email is verplicht/i)).toBeInTheDocument()
-      expect(screen.getByText(/wachtwoord is verplicht/i)).toBeInTheDocument()
-    })
-  })
-
-  it('calls onSubmit with form data', async () => {
-    const mockOnSubmit = jest.fn()
-    render(<LoginForm onSubmit={mockOnSubmit} />)
-    
-    fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: 'test@example.com' }
-    })
-    fireEvent.change(screen.getByLabelText(/wachtwoord/i), {
-      target: { value: 'password123' }
-    })
-    fireEvent.click(screen.getByRole('button', { name: /inloggen/i }))
-    
-    await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        password: 'password123'
-      })
-    })
-  })
-})
-```
-
-## End-to-End Tests with Cypress
-```typescript
-// cypress/e2e/auth.cy.ts
-describe('Authentication', () => {
-  beforeEach(() => {
-    cy.visit('/')
-  })
-
-  it('should login successfully', () => {
-    cy.get('[data-cy=email-input]').type('test@example.com')
-    cy.get('[data-cy=password-input]').type('password123')
-    cy.get('[data-cy=login-button]').click()
-
-    cy.url().should('include', '/dashboard')
-    cy.get('[data-cy=user-menu]').should('be.visible')
-  })
-
-  it('should show error on invalid credentials', () => {
-    cy.get('[data-cy=email-input]').type('wrong@example.com')
-    cy.get('[data-cy=password-input]').type('wrongpass')
-    cy.get('[data-cy=login-button]').click()
-
-    cy.get('[data-cy=error-message]')
-      .should('be.visible')
-      .and('contain', 'Ongeldige inloggegevens')
-  })
-})
-```
-
-## Custom Hook voor Error Handling
-```typescript
-interface UseErrorHandlingProps {
-  onError?: (error: Error) => void;
-}
-
-const useErrorHandling = ({ onError }: UseErrorHandlingProps = {}) => {
-  const [error, setError] = useState<Error | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-
-  const handleError = useCallback((error: Error) => {
-    setError(error)
-    onError?.(error)
-    trackError(error)
-  }, [onError])
-
-  const clearError = useCallback(() => {
-    setError(null)
-  }, [])
-
-  const wrapAsync = useCallback(async <T,>(
-    promise: Promise<T>,
-    errorMessage = 'Er is een fout opgetreden'
-  ): Promise<T> => {
-    try {
-      setIsLoading(true)
-      const result = await promise
-      return result
-    } catch (error) {
-      const wrappedError = new Error(
-        error instanceof Error ? error.message : errorMessage
-      )
-      handleError(wrappedError)
-      throw wrappedError
-    } finally {
-      setIsLoading(false)
-    }
-  }, [handleError])
-
-  return {
-    error,
-    isLoading,
-    clearError,
-    wrapAsync,
-    handleError
-  }
-}
-``` 
+## 7. Test Coverage
+    - Streefdoel: (bv. 80% voor alle categorieën, zoals in `jest.config.ts`).
+    - Hoe coverage te bekijken en verbeteren. 
