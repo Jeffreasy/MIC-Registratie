@@ -22,7 +22,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   global: {
     // Globale instellingen (indien nodig)
     headers: {
-      'x-application-name': 'mic-registratie'
+      'x-application-name': 'mic-registratie',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'x-application-name, authorization, x-client-info, apikey, content-type'
     }
   },
   realtime: {

@@ -54,15 +54,23 @@ interface AuthCardHeaderProps {
   title: string;
   subtitle: string;
   description?: string;
+  logo?: string;
 }
 
 export const AuthCardHeader: React.FC<AuthCardHeaderProps> = ({ 
   title, 
   subtitle, 
-  description 
+  description,
+  logo
 }) => (
   <div className={AUTH_HEADER_CLASSES}>
-    <h1 className={AUTH_TITLE_CLASSES}>{title}</h1>
+    {logo ? (
+      <div className="flex justify-center mb-4">
+        <img src={logo} alt={title} className="h-12 w-auto" />
+      </div>
+    ) : (
+      <h1 className={AUTH_TITLE_CLASSES}>{title}</h1>
+    )}
     <h2 className={AUTH_SUBTITLE_CLASSES}>{subtitle}</h2>
     {description && (
       <p className={AUTH_DESCRIPTION_CLASSES}>{description}</p>

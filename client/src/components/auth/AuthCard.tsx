@@ -6,6 +6,7 @@ interface AuthCardProps {
   title: string;
   subtitle: string;
   description?: string;
+  logo?: string;
   children: React.ReactNode;
   footerContent?: React.ReactNode;
   onSubmit?: (event: React.FormEvent<HTMLFormElement>) => void;
@@ -19,6 +20,7 @@ const AuthCard: React.FC<AuthCardProps> = ({
   title,
   subtitle,
   description,
+  logo,
   children,
   footerContent,
   onSubmit
@@ -43,7 +45,8 @@ const AuthCard: React.FC<AuthCardProps> = ({
         <AuthCardHeader 
           title={title} 
           subtitle={subtitle} 
-          description={description} 
+          description={description}
+          logo={logo}
         />
         
         {content}

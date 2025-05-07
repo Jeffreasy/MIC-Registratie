@@ -8,6 +8,7 @@ import {
   AuthErrorMessage 
 } from '@/components/auth';
 import { AUTH_INPUT_WRAPPER_CLASSES, AUTH_INPUT_CLASSES, AUTH_LINK_CLASSES } from '@/lib/auth-styles';
+import logo from '@/assets/sqcqweq_ncn3om.webp';
 
 interface LoginFormProps {
   username: string;
@@ -33,6 +34,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
       title="Sheerenloo"
       subtitle="Inloggen"
       description="Toegang tot uw MIC-registratie omgeving"
+      logo={logo}
       onSubmit={handleLogin}
     >
       {/* Gebruikersnaam veld */}
