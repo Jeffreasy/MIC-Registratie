@@ -65,7 +65,7 @@ export const getCurrentUser = async () => {
 // Helper functie om naar een specifieke tabel te luisteren voor veranderingen
 export const subscribeToTable = (
   tableName: 'incident_logs' | 'clients' | 'incident_types',
-  callback: (payload: RealtimePostgresChangesPayload<Record<string, any>>) => void
+  callback: (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => void
 ) => {
   return supabase
     .channel(`table-changes:${tableName}`)
@@ -79,6 +79,6 @@ export const subscribeToTable = (
 
 // Voor debugging
 if (import.meta.env.DEV) {
-  // @ts-ignore - Voeg supabase toe aan window in development
+  // @ts-expect-error - Voeg supabase toe aan window in development
   window.supabase = supabase
 } 

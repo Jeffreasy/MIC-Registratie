@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { MonthlySummary, DailyTotal, IncidentLogWithRelations } from '@/lib/types';
+import { DailyTotal, IncidentLogWithRelations, ChartMonthlySummary } from '@/lib/types';
 
 export const useAnalyticsData = (userId: string | undefined) => {
   const [startDate, setStartDate] = useState<string>(() => {
@@ -15,7 +15,7 @@ export const useAnalyticsData = (userId: string | undefined) => {
     return date.toISOString().split('T')[0];
   });
   
-  const [monthlyData, setMonthlyData] = useState<MonthlySummary[]>([]);
+  const [monthlyData, setMonthlyData] = useState<ChartMonthlySummary[]>([]);
   const [dailyTotals, setDailyTotals] = useState<DailyTotal[]>([]);
   const [logs, setLogs] = useState<IncidentLogWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,17 +55,26 @@ export const useAnalyticsData = (userId: string | undefined) => {
         if (logsError) throw logsError;
         setLogs(logsData as unknown as IncidentLogWithRelations[] || []);
 
-        // 2. Haal maandelijkse samenvatting op uit de speciale view
-        const { data: _monthlyData, error: monthlyError } = await supabase
-          .from('monthly_summary')
-          .select('*')
+        // 2. Haal maandelijkse samenvatting op uit de nieuwe view voor de grafiek
+        const { data: newMonthlyData, error: monthlyError } = await supabase
+          .from('monthly_incident_totals_for_chart') // Gebruik de nieuwe view
+          .select('month, total_count') // Selecteer alleen de benodigde kolommen
           .eq('user_id', userId)
-          .gte('month', startDate.substring(0, 7) + '-01') // Format to YYYY-MM-DD for timestamp compatibility
+          .gte('month', startDate.substring(0, 7) + '-01') 
           .lte('month', endDate.substring(0, 7) + '-01')
           .order('month');
 
+        // Console logs om de nieuwe data te inspecteren
+        console.log('Querying monthly_incident_totals_for_chart with:', {
+          userId,
+          startFilter: startDate.substring(0, 7) + '-01',
+          endFilter: endDate.substring(0, 7) + '-01'
+        });
+        console.log('Monthly Error from Supabase (new view):', monthlyError);
+        console.log('Monthly Data from Supabase (new view):', newMonthlyData);
+
         if (monthlyError) throw monthlyError;
-        setMonthlyData(_monthlyData || []);
+        setMonthlyData(newMonthlyData || []); // Zet de data voor de grafiek
 
         // 3. Haal dagelijkse totalen op via materialized view
         const { data: _dailyTotals, error: dailyError } = await supabase
@@ -79,9 +88,13 @@ export const useAnalyticsData = (userId: string | undefined) => {
         if (dailyError) throw dailyError;
         setDailyTotals(_dailyTotals || []);
         
-      } catch (err: any) {
+      } catch (err: unknown) {
+        let errorMessage = 'Er is een onbekende fout opgetreden bij het ophalen van gegevens.';
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        }
         console.error('Error fetching analytics data:', err);
-        setError('Kon gegevens niet laden: ' + err.message);
+        setError('Kon gegevens niet laden: ' + errorMessage);
       } finally {
         setLoading(false);
       }

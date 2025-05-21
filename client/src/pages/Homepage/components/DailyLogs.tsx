@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Edit2, MapPin, Clock, AlertTriangle } from "lucide-react";
+import { Trash2, Edit2, MapPin, Clock, AlertTriangle, Loader2 } from "lucide-react";
 import { IncidentLogWithRelations } from '@/lib/types';
 
 interface DailyLogsProps {
@@ -11,6 +11,7 @@ interface DailyLogsProps {
   onDeleteLog: (id: number) => void;
   onUpdateLogCount: (id: number, count: number) => void;
   formatTime: (time: string | null) => string;
+  isLoading?: boolean;
 }
 
 const DailyLogs: React.FC<DailyLogsProps> = ({
@@ -19,7 +20,8 @@ const DailyLogs: React.FC<DailyLogsProps> = ({
   editingLog,
   onDeleteLog,
   onUpdateLogCount,
-  formatTime
+  formatTime,
+  isLoading
 }) => {
   const [countEdits, setCountEdits] = useState<{[key: number]: number}>({});
   
@@ -45,10 +47,16 @@ const DailyLogs: React.FC<DailyLogsProps> = ({
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg">Registraties vandaag</CardTitle>
+          {isLoading && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
         </div>
       </CardHeader>
       <CardContent>
-        {dailyLogs.length === 0 ? (
+        {isLoading && dailyLogs.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+            Laden...
+          </div>
+        ) : dailyLogs.length === 0 && !isLoading ? (
           <div className="text-center py-6 text-muted-foreground">
             Geen registraties gevonden voor vandaag.
           </div>

@@ -114,4 +114,10 @@ export interface IncidentTypeWithTotals {
   severity_level: number | null;
   color_code: string | null;
   logs: IncidentLogWithRelations[];
+}
+
+// Type specific for the monthly chart data
+export interface ChartMonthlySummary {
+  month: string;      // e.g., "2023-10-01"
+  total_count: number;
 } 

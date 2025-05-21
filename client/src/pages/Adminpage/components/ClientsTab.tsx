@@ -44,9 +44,12 @@ const ClientsTab: React.FC<ClientsTabProps> = ({ clients, setClients, setError }
       
       // Reset form
       setNewClientName('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating client:', err);
-      setError('Kon cliënt niet aanmaken: ' + err.message);
+      let errorMessage = 'Kon cliënt niet aanmaken.';
+      if (err instanceof Error) { errorMessage = err.message; }
+      else if (typeof err === 'string') { errorMessage = err; }
+      setError('Kon cliënt niet aanmaken: ' + errorMessage);
     }
   };
   
@@ -66,9 +69,12 @@ const ClientsTab: React.FC<ClientsTabProps> = ({ clients, setClients, setError }
       ));
       
       setEditingClient(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating client:', err);
-      setError('Kon cliënt niet bijwerken: ' + err.message);
+      let errorMessage = 'Kon cliënt niet bijwerken.';
+      if (err instanceof Error) { errorMessage = err.message; }
+      else if (typeof err === 'string') { errorMessage = err; }
+      setError('Kon cliënt niet bijwerken: ' + errorMessage);
     }
   };
 

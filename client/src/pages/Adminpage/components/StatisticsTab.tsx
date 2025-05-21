@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,32 @@ import { format } from "date-fns";
 
 interface StatisticsTabProps {
   setError: (error: string | null) => void;
+}
+
+// Interface voor de verwerkte dagelijkse data voor de grafiek
+interface ProcessedDailyChartData {
+  date: string;
+  value: number;
+}
+
+// Interface voor de verwerkte categorie data voor de grafiek
+interface ProcessedCategoryChartData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+// Interface voor de gedetailleerde incidenten (vereenvoudigd, pas aan indien nodig)
+interface ProcessedDetailedIncident {
+  id: number;
+  log_date: string;
+  count: number;
+  location: string | null;
+  client_id: string | null; // Behoud voor filtering/groepering indien nodig
+  incident_type_id: number | null; // Behoud voor filtering/groepering indien nodig
+  incident_type: { id: number; name: string; category: string | null; } | null;
+  client: { id: string; full_name: string; } | null;
+  // Voeg hier meer velden toe als ze worden gebruikt in de UI
 }
 
 const StatisticsTab: React.FC<StatisticsTabProps> = ({ setError }) => {
@@ -21,186 +47,141 @@ const StatisticsTab: React.FC<StatisticsTabProps> = ({ setError }) => {
   const [startDate, setStartDate] = useState<string>(defaultStartDate());
   const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
-  const [dailyData, setDailyData] = useState<any[]>([]);
-  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [dailyData, setDailyData] = useState<ProcessedDailyChartData[]>([]);
+  const [categoryData, setCategoryData] = useState<ProcessedCategoryChartData[]>([]);
   const [totalsData, setTotalsData] = useState<{total: number, clients: number, types: number}>({
     total: 0,
     clients: 0,
     types: 0
   });
-  const [detailedIncidents, setDetailedIncidents] = useState<any[]>([]);
+  const [detailedIncidents, setDetailedIncidents] = useState<ProcessedDetailedIncident[]>([]);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
-  // Fetch data on date range change
-  useEffect(() => {
-    fetchStatisticsData();
-  }, [startDate, endDate]);
+  // Helper functies eerst, zodat ze in useCallback gebruikt kunnen worden zonder dependency issues
+  const formatDateForChart = useCallback((dateString: string): string => {
+    const date = new Date(dateString);
+    return format(date, 'dd/MM');
+  }, []);
 
-  const fetchStatisticsData = async () => {
-    if (!startDate || !endDate) return;
-    
-    setLoading(true);
-    try {
-      // Fetch daily totals data
-      const { data: dailyTotals, error: dailyError } = await supabase
-        .from('daily_totals')
-        .select('*')
-        .gte('log_date', startDate)
-        .lte('log_date', endDate)
-        .order('log_date');
-        
-      if (dailyError) throw dailyError;
-      
-      // Process daily data for charts
-      const processedDailyData = processDateData(dailyTotals || []);
-      setDailyData(processedDailyData);
-      
-      // Fetch categories and group by category
-      const { data: categoryTotals, error: categoryError } = await supabase
-        .from('daily_totals')
-        .select('category, total_count')
-        .gte('log_date', startDate)
-        .lte('log_date', endDate);
-        
-      if (categoryError) throw categoryError;
-      
-      // Process category data for pie chart - manual grouping
-      const categoryMap: Record<string, number> = {};
-      (categoryTotals || []).forEach((item: any) => {
-        const categoryName = item.category || 'Onbekend';
-        if (!categoryMap[categoryName]) {
-          categoryMap[categoryName] = 0;
-        }
-        categoryMap[categoryName] += item.total_count;
-      });
-      
-      const processedCategoryData = Object.entries(categoryMap).map(([category, totalCount]) => ({
-        name: category,
-        value: totalCount,
-        color: getCategoryColor(category)
-      }));
-      
-      setCategoryData(processedCategoryData);
-
-      // Haal gedetailleerde incidentgegevens op
-      const { data: incidents, error: incidentsError } = await supabase
-        .from('incident_logs')
-        .select(`
-          id,
-          log_date,
-          count,
-          location,
-          client_id,
-          incident_type_id,
-          incident_type:incident_type_id(id, name, category),
-          client:client_id(id, full_name)
-        `)
-        .gte('log_date', startDate)
-        .lte('log_date', endDate)
-        .order('log_date', { ascending: false });
-        
-      if (incidentsError) throw incidentsError;
-      
-      // Controleer of er ontbrekende client relaties zijn
-      if (incidents && incidents.length > 0) {
-        const missingClientIds = incidents
-          .filter(inc => !inc.client)
-          .map(inc => inc.client_id)
-          .filter(id => id); // Filter out null/undefined
-          
-        if (missingClientIds.length > 0) {
-          // Haal ontbrekende clients direct op
-          const { data: missingClients } = await supabase
-            .from('clients')
-            .select('id, full_name')
-            .in('id', missingClientIds);
-            
-          // Handmatig client informatie toevoegen aan incidents
-          const enrichedIncidents = incidents.map(incident => {
-            if (!incident.client && incident.client_id) {
-              const matchingClient = missingClients?.find(c => c.id === incident.client_id);
-              if (matchingClient) {
-                return {
-                  ...incident,
-                  client: matchingClient
-                };
-              }
-            }
-            return incident;
-          });
-          
-          setDetailedIncidents(enrichedIncidents);
-        } else {
-          setDetailedIncidents(incidents);
-        }
-      } else {
-        setDetailedIncidents([]);
-      }
-
-      // Calculate totals manually
-      let totalIncidents = 0;
-      const clientIds = new Set<string>();
-      const typeIds = new Set<string>();
-      
-      (dailyTotals || []).forEach((item: any) => {
-        totalIncidents += item.total_count;
-        if (item.client_id) clientIds.add(item.client_id);
-        if (item.incident_type_id) typeIds.add(item.incident_type_id);
-      });
-      
-      setTotalsData({
-        total: totalIncidents,
-        clients: clientIds.size,
-        types: typeIds.size
-      });
-      
-    } catch (err: any) {
-      console.error('Error fetching statistics data:', err);
-      setError(`Kon statistieken niet laden: ${err.message}`);
-    } finally {
-      setLoading(false);
+  const getCategoryColor = useCallback((category: string | null): string => {
+    switch(category) {
+      case 'fysiek': return '#ef4444';
+      case 'verbaal': return '#3b82f6';
+      case 'emotioneel': return '#eab308';
+      case 'sociaal': return '#22c55e';
+      default: return '#888888';
     }
-  };
-  
-  // Process date data for charts
-  const processDateData = (data: any[]) => {
-    // Group by date
+  }, []);
+
+  const processDateData = useCallback((data: {log_date: string, total_count: number}[]): ProcessedDailyChartData[] => {
     const dateGroups: {[key: string]: number} = {};
-    
-    data.forEach((item: any) => {
+    data.forEach(item => {
       const date = item.log_date;
       if (!dateGroups[date]) {
         dateGroups[date] = 0;
       }
       dateGroups[date] += item.total_count;
     });
-    
-    // Convert to array for chart
     return Object.entries(dateGroups)
       .map(([date, count]) => ({
-        date: formatDate(date),
+        date: formatDateForChart(date),
         value: count
       }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-  };
-  
-  // Format date for display
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    // Standaard format zonder locale
-    return format(date, 'dd/MM');
-  };
-  
-  // Get color based on category
-  const getCategoryColor = (category: string | null): string => {
-    switch(category) {
-      case 'fysiek': return '#ef4444';
-      case 'verbaal': return '#3b82f6';
-      case 'emotioneel': return '#eab308';
-      case 'sociaal': return '#22c55e';
-      default: return '#a3a3a3';
+      .sort((a, b) => a.date.localeCompare(b.date)); // Overweeg sorteren op originele datum indien nodig
+  }, [formatDateForChart]);
+
+  const fetchStatisticsData = useCallback(async () => {
+    if (!startDate || !endDate) return;
+    setLoading(true);
+    setError(null); // Reset error state
+    try {
+      const { data: dailyTotals, error: dailyError } = await supabase
+        .from('daily_totals')
+        .select('log_date, total_count, client_id, incident_type_id, category') // explicieter maken
+        .gte('log_date', startDate)
+        .lte('log_date', endDate)
+        .order('log_date');
+      if (dailyError) throw dailyError;
+      
+      const typedDailyTotals = (dailyTotals || []) as {log_date: string, total_count: number, client_id: string | null, incident_type_id: number | null, category: string | null}[];
+      setDailyData(processDateData(typedDailyTotals.map(dt => ({ log_date: dt.log_date, total_count: dt.total_count }))));
+      
+      const categoryMap: Record<string, number> = {};
+      typedDailyTotals.forEach(item => {
+        const categoryName = item.category || 'Onbekend';
+        if (!categoryMap[categoryName]) {
+          categoryMap[categoryName] = 0;
+        }
+        categoryMap[categoryName] += item.total_count;
+      });
+      setCategoryData(Object.entries(categoryMap).map(([category, totalCount]) => ({
+        name: category,
+        value: totalCount,
+        color: getCategoryColor(category)
+      })));
+
+      const { data: incidentsRaw, error: incidentsError } = await supabase
+        .from('incident_logs')
+        .select('id, log_date, count, location, client_id, incident_type_id, incident_type:incident_type_id(id, name, category), client:client_id(id, full_name)')
+        .gte('log_date', startDate)
+        .lte('log_date', endDate)
+        .order('log_date', { ascending: false });
+      if (incidentsError) throw incidentsError;
+      
+      // Type assertion for incidents data
+      let fetchedIncidents = (incidentsRaw || []) as unknown as ProcessedDetailedIncident[];
+
+      // De logica voor het verrijken van missende clients kan blijven, maar zorg dat de types matchen
+      // Deze sectie heeft mogelijk meer verfijning nodig afhankelijk van de exacte datastructuur
+      const missingClientIds = fetchedIncidents
+        .filter(inc => !inc.client && inc.client_id)
+        .map(inc => inc.client_id!)
+        .filter((id, index, self) => self.indexOf(id) === index); // Unieke IDs
+
+      if (missingClientIds.length > 0) {
+        const { data: missingClientsData } = await supabase
+          .from('clients')
+          .select('id, full_name')
+          .in('id', missingClientIds);
+        const missingClients = (missingClientsData || []) as {id: string, full_name: string}[];
+
+        fetchedIncidents = fetchedIncidents.map(incident => {
+          if (!incident.client && incident.client_id) {
+            const matchingClient = missingClients.find(c => c.id === incident.client_id);
+            if (matchingClient) {
+              return { ...incident, client: matchingClient };
+            }
+          }
+          return incident;
+        });
+      }
+      setDetailedIncidents(fetchedIncidents);
+
+      let totalIncidentsCount = 0;
+      const clientIdsSet = new Set<string>();
+      const typeIdsSet = new Set<number>();
+      typedDailyTotals.forEach(item => {
+        totalIncidentsCount += item.total_count;
+        if (item.client_id) clientIdsSet.add(item.client_id);
+        if (item.incident_type_id) typeIdsSet.add(item.incident_type_id);
+      });
+      setTotalsData({ total: totalIncidentsCount, clients: clientIdsSet.size, types: typeIdsSet.size });
+      
+    } catch (err: unknown) { // Changed to unknown
+      console.error('Error fetching statistics data:', err);
+      let errorMessage = 'Kon statistieken niet laden.';
+      if (err instanceof Error) { errorMessage = err.message; }
+      else if (typeof err === 'string') { errorMessage = err; }
+      setError('Kon statistieken niet laden: ' + errorMessage);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [startDate, endDate, setError, processDateData, getCategoryColor]); // Added dependencies
+
+  // Fetch data on date range change or component mount
+  useEffect(() => {
+    fetchStatisticsData();
+  }, [fetchStatisticsData]); // Corrected dependency
 
   // Helper functie om bekend client_id te herkennen
   const getClientNameFromId = (clientId: string | null): string => {
@@ -407,7 +388,7 @@ const StatisticsTab: React.FC<StatisticsTabProps> = ({ setError }) => {
                                       .filter(incident => incident.incident_type?.category === category.name)
                                       .map(incident => (
                                         <tr key={incident.id} className="border-b border-muted last:border-b-0">
-                                          <td className="py-2 px-1">{formatDate(incident.log_date)}</td>
+                                          <td className="py-2 px-1">{formatDateForChart(incident.log_date)}</td>
                                           <td className="py-2 px-1">{incident.incident_type?.name || 'Onbekend'}</td>
                                           <td className="py-2 px-1">
                                             {incident.client?.full_name || getClientNameFromId(incident.client_id)}

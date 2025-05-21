@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import React from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,8 +29,6 @@ const HomePage: React.FC = () => {
     handleIncidentLog,
     handleDeleteLog,
     handleUpdateLogCount,
-    fetchTodaysLogs,
-    fetchData,
     formatTime
   } = useHomePageData(user?.id);
 

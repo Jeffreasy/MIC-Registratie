@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import React from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

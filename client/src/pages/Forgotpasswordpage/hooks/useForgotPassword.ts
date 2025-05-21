@@ -48,9 +48,17 @@ const useForgotPassword = () => {
       setTimeout(() => {
         navigate('/login');
       }, 3000);
-    } catch (error: any) {
-      console.error('Password reset error:', error);
-      setError(error.message || 'Er is een fout opgetreden bij het resetten van het wachtwoord.');
+    } catch (err: unknown) {
+      console.error('Password reset error:', err);
+      let errorMessage = 'Er is een fout opgetreden bij het resetten van het wachtwoord.';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      // Specifieke error handling voor Supabase FunctionError als die een bekende structuur heeft
+      // Voor nu gebruiken we de algemene err.message als die bestaat
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

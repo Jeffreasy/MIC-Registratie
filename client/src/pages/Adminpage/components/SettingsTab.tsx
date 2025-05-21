@@ -74,9 +74,12 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ setError }) => {
       // Verberg succes feedback na 3 seconden
       setTimeout(() => setSaveSuccess(false), 3000);
       
-    } catch (error: any) {
-      console.error('Error saving settings:', error);
-      setError(`Kon instellingen niet opslaan: ${error.message}`);
+    } catch (err: unknown) {
+      console.error('Error saving settings:', err);
+      let errorMessage = 'Kon instellingen niet opslaan.';
+      if (err instanceof Error) { errorMessage = err.message; }
+      else if (typeof err === 'string') { errorMessage = err; }
+      setError('Kon instellingen niet opslaan: ' + errorMessage);
     } finally {
       setLoading(false);
     }
@@ -88,7 +91,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ setError }) => {
     
     try {
       // Query bouwen op basis van periode selectie
-      let query = supabase
+      const query = supabase
         .from('incident_logs')
         .select(`
           id,
@@ -142,9 +145,9 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ setError }) => {
       // Maak kolomconfiguratie voor betere weergave
       const columnConfig: ColumnConfig[] = [
         { key: 'log_date', header: 'Datum', format: 'date' },
-        { key: 'client', header: 'Cliënt', transform: (value: any) => value?.full_name || '' },
-        { key: 'incident_type', header: 'Type Incident', transform: (value: any) => value?.name || '' },
-        { key: 'incident_type', header: 'Categorie', transform: (value: any) => value?.category || '' },
+        { key: 'client', header: 'Cliënt', transform: (value: { full_name?: string } | null | undefined) => value?.full_name || '' },
+        { key: 'incident_type', header: 'Type Incident', transform: (value: { name?: string } | null | undefined) => value?.name || '' },
+        { key: 'incident_type', header: 'Categorie', transform: (value: { category?: string } | null | undefined) => value?.category || '' },
         { key: 'location', header: 'Locatie' },
         { key: 'severity', header: 'Ernst' },
         { key: 'time_of_day', header: 'Tijdstip' },
@@ -178,9 +181,12 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ setError }) => {
         includeMetadata: true
       });
       
-    } catch (error: any) {
-      console.error('Error exporting data:', error);
-      setError(`Kon data niet exporteren: ${error.message}`);
+    } catch (err: unknown) {
+      console.error('Error exporting data:', err);
+      let errorMessage = 'Kon data niet exporteren.';
+      if (err instanceof Error) { errorMessage = err.message; }
+      else if (typeof err === 'string') { errorMessage = err; }
+      setError('Kon data niet exporteren: ' + errorMessage);
     } finally {
       setLoading(false);
     }
@@ -193,7 +199,7 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ setError }) => {
     try {
       // Haal de structuur en data van alle relevante tabellen op
       const tables = ['incident_logs', 'clients', 'incident_types', 'daily_totals', 'profiles'];
-      const backup: Record<string, any[]> = {};
+      const backup: Record<string, unknown[]> = {};
       
       for (const table of tables) {
         const { data, error } = await supabase
@@ -211,9 +217,12 @@ const SettingsTab: React.FC<SettingsTabProps> = ({ setError }) => {
       // Gebruik de quick export functie voor JSON met metadata
       quickExportToJson(backup, `mic-database-backup-${new Date().toISOString().split('T')[0]}`, true);
       
-    } catch (error: any) {
-      console.error('Error creating backup:', error);
-      setError(`Kon backup niet maken: ${error.message}`);
+    } catch (err: unknown) {
+      console.error('Error creating backup:', err);
+      let errorMessage = 'Kon backup niet maken.';
+      if (err instanceof Error) { errorMessage = err.message; }
+      else if (typeof err === 'string') { errorMessage = err; }
+      setError('Kon backup niet maken: ' + errorMessage);
     } finally {
       setLoading(false);
     }

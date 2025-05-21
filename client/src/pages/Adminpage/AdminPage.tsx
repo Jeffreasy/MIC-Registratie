@@ -1,62 +1,56 @@
-// @ts-nocheck
-
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, LogOut } from 'lucide-react';
-import { ClientsTab, IncidentsTab, UsersTab, StatisticsTab, SettingsTab } from './components';
+import { UsersTab, StatisticsTab, SettingsTab } from './components';
 import useAdminData from './hooks/useAdminData';
 import { supabase } from '@/lib/supabaseClient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import UserManagementTab from './components/UserManagementTab';
-import ClientManagementTab from './components/ClientManagementTab';
-import IncidentTypesTab from './components/IncidentTypesTab';
+import { UserRole } from '@/lib/types';
 
-type AdminTab = 'clients' | 'incidents' | 'users';
-
-interface UserProfile {
+interface AdminPageUserProfile {
   id: string;
-  email: string;
-  role: string;
-  updated_at: string;
-  full_name?: string;
+  email?: string | null;
+  role: UserRole;
+  updated_at?: string | null;
+  full_name: string | null;
 }
 
 const AdminPage: React.FC = () => {
-  const { user, userProfile, signOut } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<AdminTab>('clients');
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const { userProfile, signOut } = useAuthStore();
+  const [users, setUsers] = useState<AdminPageUserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   
-  // Gebruik de custom hook voor data management
-  const {
-    clients,
-    setClients,
-    incidentTypes,
-    setIncidentTypes,
-    setError: useAdminDataError,
-  } = useAdminData();
+  useAdminData();
 
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        const { data, error: fetchError } = await supabase
           .from('profiles')
           .select('id, email, role, updated_at, full_name');
           
-        if (error) throw error;
-        setUsers(data || []);
-      } catch (err: any) {
+        if (fetchError) throw fetchError;
+
+        const processedUsers = (data || [])
+          .map(u => ({
+            id: u.id as string,
+            email: (u.email === undefined ? null : u.email) as string | null | undefined,
+            role: u.role as UserRole,
+            updated_at: (u.updated_at === undefined ? null : u.updated_at) as string | null | undefined,
+            full_name: (u.full_name === undefined ? null : u.full_name) as string | null,
+          }))
+          .filter(u => u.role && typeof u.role === 'string' && (u.role === 'medewerker' || u.role === 'super_admin'))
+          setUsers(processedUsers as AdminPageUserProfile[]);
+
+      } catch (err: unknown) {
         console.error('Error fetching users:', err);
-        setError(err.message);
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -70,31 +64,15 @@ const AdminPage: React.FC = () => {
       if (signOut) {
         await signOut();
       } else {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) throw signOutError;
       }
       navigate('/login');
-    } catch (error: any) {
-      setError(`Kon niet uitloggen: ${error.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`Kon niet uitloggen: ${message}`);
     }
   };
-  
-  // Tab navigation component
-  const TabButton: React.FC<{
-    tab: AdminTab;
-    label: string;
-  }> = ({ tab, label }) => (
-    <button
-      className={`px-3 py-2 ${
-        activeTab === tab
-          ? 'border-b-2 border-primary font-medium text-primary'
-          : 'text-muted-foreground hover:text-foreground'
-      }`}
-      onClick={() => setActiveTab(tab)}
-    >
-      {label}
-    </button>
-  );
 
   if (loading) {
     return (
@@ -139,6 +117,11 @@ const AdminPage: React.FC = () => {
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <Link to="/" className="absolute top-4 left-4">
+            <Button variant="outline" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+        </Link>
         <Button 
           variant="outline" 
           onClick={handleSignOut}
@@ -149,7 +132,7 @@ const AdminPage: React.FC = () => {
       </div>
       
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
           <span className="font-bold">Fout:</span> {error}
         </div>
       )}

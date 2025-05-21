@@ -178,10 +178,11 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
       // Geef de gebruiker een melding met het tijdelijke wachtwoord
       alert(`Gebruiker aangemaakt met email: ${email}\n\nTijdelijk wachtwoord: ${tempPassword}\n\nHet wachtwoord is gekopieerd naar het klembord.\n\nGeef dit wachtwoord door aan de gebruiker en vraag om het direct te wijzigen bij de eerste login.`);
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating user:', err);
-      setToast({ message: `Kon gebruiker niet aanmaken: ${err.message || err}`, type: 'error' });
-      setError('Kon gebruiker niet aanmaken: ' + (err.message || err));
+      const message = err instanceof Error ? err.message : String(err);
+      setToast({ message: `Kon gebruiker niet aanmaken: ${message}`, type: 'error' });
+      setError('Kon gebruiker niet aanmaken: ' + message);
     } finally {
       setIsCreatingUser(false);
     }
@@ -204,10 +205,11 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
       
       setEditingUser(null);
       setToast({ message: 'Gebruikersrol succesvol bijgewerkt', type: 'success' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating user role:', err);
-      setToast({ message: `Kon gebruikersrol niet bijwerken: ${err.message}`, type: 'error' });
-      setError('Kon gebruikersrol niet bijwerken: ' + err.message);
+      const message = err instanceof Error ? err.message : String(err);
+      setToast({ message: `Kon gebruikersrol niet bijwerken: ${message}`, type: 'error' });
+      setError('Kon gebruikersrol niet bijwerken: ' + message);
     }
   };
 
@@ -236,10 +238,11 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
       setToast({ message: 'Gebruiker succesvol verwijderd', type: 'success' });
       setUserToDelete(null);
       setShowDeleteDialog(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error deleting user:', err);
-      setToast({ message: `Kon gebruiker niet verwijderen: ${err.message || err}`, type: 'error' });
-      setError('Kon gebruiker niet verwijderen: ' + (err.message || err));
+      const message = err instanceof Error ? err.message : String(err);
+      setToast({ message: `Kon gebruiker niet verwijderen: ${message}`, type: 'error' });
+      setError('Kon gebruiker niet verwijderen: ' + message);
     }
   };
 
@@ -264,19 +267,20 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
   });
 
   // Sorteer gebruikers
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
-    let aValue: any = a[sortBy];
-    let bValue: any = b[sortBy];
+  const sortedUsers = [...filteredUsers].sort((a: UserProfile, b: UserProfile) => {
+    // Get values, prepare for string comparison
+    const valA = a[sortBy];
+    const valB = b[sortBy];
+
+    // Convert to string for consistent comparison, treat null/undefined as empty string
+    // UserRole will also be correctly converted to its string representation.
+    const stringValA = String(valA === null || valA === undefined ? '' : valA);
+    const stringValB = String(valB === null || valB === undefined ? '' : valB);
     
-    // Null checks
-    if (aValue === null) aValue = '';
-    if (bValue === null) bValue = '';
-    
-    // Vergelijk
     if (sortDirection === 'asc') {
-      return aValue > bValue ? 1 : -1;
+      return stringValA.localeCompare(stringValB);
     } else {
-      return aValue < bValue ? 1 : -1;
+      return stringValB.localeCompare(stringValA);
     }
   });
 
@@ -319,7 +323,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
                 id="user-email"
                 name="user-email"
                 value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewUserEmail(e.target.value)}
                 placeholder="naam@sheerenloo.nl"
                 aria-label="Email adres"
               />
@@ -331,7 +335,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
               <Label htmlFor="user-role">Rol</Label>
               <Select
                 value={newUserRole}
-                onValueChange={(value: any) => setNewUserRole(value)}
+                onValueChange={(value: string) => setNewUserRole(value as UserRole)}
                 name="user-role"
               >
                 <SelectTrigger id="user-role" className="w-[140px]">
@@ -386,7 +390,7 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
               <Input
                 placeholder="Zoeken..."
                 value={searchTerm}
-                onChange={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   setSearchTerm(e.target.value);
                   setCurrentPage(1); // Reset paginering bij zoeken
                 }}
@@ -448,23 +452,49 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  currentUsers.map((user) => user && (
-                    <TableRow key={user.id}>
-                      <TableCell className="text-xs max-w-[100px] truncate font-mono">{user.id}</TableCell>
-                      <TableCell>{user.email || '-'}</TableCell>
-                      <TableCell>{user.full_name || '-'}</TableCell>
+                  currentUsers.map((userItem: UserProfile) => (
+                    <TableRow key={userItem.id}>
+                      <TableCell className="text-xs max-w-[100px] truncate font-mono">{userItem.id}</TableCell>
                       <TableCell>
-                        {editingUser === user.id ? (
-                          <Select
-                            value={users.find(u => u.id === user.id)?.role || 'medewerker'}
-                            onValueChange={(value: any) => {
-                              setUsers(users.map(u => 
-                                u.id === user.id ? { ...u, role: value } : u
-                              ));
-                            }}
-                            name={`edit-role-${user.id}`}
+                        {editingUser === userItem.id ? (
+                          <Input
+                            type="email"
+                            value={users.find(u => u.id === userItem.id)?.email || ''}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                              setUsers(currentUsers => currentUsers.map(u => 
+                                u.id === userItem.id ? { ...u, email: e.target.value } : u
+                              ))
+                            }
+                          />
+                        ) : (
+                          userItem.email || 'N/A'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingUser === userItem.id ? (
+                          <Input
+                            value={users.find(u => u.id === userItem.id)?.full_name || ''}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                              setUsers(currentUsers => currentUsers.map(u => 
+                                u.id === userItem.id ? { ...u, full_name: e.target.value } : u
+                              ))
+                            }
+                          />
+                        ) : (
+                          userItem.full_name || 'N/A'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingUser === userItem.id ? (
+                          <Select 
+                            value={users.find(u => u.id === userItem.id)?.role || 'medewerker'}
+                            onValueChange={(value: string) => 
+                              setUsers(currentUsers => currentUsers.map(u => 
+                                u.id === userItem.id ? { ...u, role: value as UserRole } : u
+                              ))
+                            }
                           >
-                            <SelectTrigger className="w-[140px]" id={`edit-role-trigger-${user.id}`}>
+                            <SelectTrigger className="w-[140px]" id={`edit-role-trigger-${userItem.id}`}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -473,21 +503,21 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
                             </SelectContent>
                           </Select>
                         ) : (
-                          <span className={`rounded-md px-2 py-1 text-xs ${user.role === 'super_admin' ? 'bg-primary/20 text-primary font-medium' : 'bg-muted text-muted-foreground'}`}>
-                            {user.role === 'super_admin' ? 'Super Admin' : 'Medewerker'}
+                          <span className={`rounded-md px-2 py-1 text-xs ${userItem.role === 'super_admin' ? 'bg-primary/20 text-primary font-medium' : 'bg-muted text-muted-foreground'}`}>
+                            {userItem.role === 'super_admin' ? 'Super Admin' : 'Medewerker'}
                           </span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        {editingUser === user.id ? (
+                        {editingUser === userItem.id ? (
                           <div className="flex justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                const current = users.find(u => u.id === user.id);
+                                const current = users.find(u => u.id === userItem.id);
                                 if (current) {
-                                  handleUpdateUserRole(user.id, current.role as UserRole);
+                                  handleUpdateUserRole(userItem.id, current.role as UserRole);
                                 }
                               }}
                             >
@@ -506,8 +536,8 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setEditingUser(user.id)}
-                              disabled={user.id === userProfile?.id} // Kan eigen rol niet wijzigen
+                              onClick={() => setEditingUser(userItem.id)}
+                              disabled={userItem.id === userProfile?.id} // Kan eigen rol niet wijzigen
                             >
                               <Edit2 className="h-4 w-4 text-primary" />
                             </Button>
@@ -515,10 +545,10 @@ const UsersTab: React.FC<UsersTabProps> = ({ users, setUsers, setError }) => {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                setUserToDelete(user);
+                                setUserToDelete(userItem);
                                 setShowDeleteDialog(true);
                               }}
-                              disabled={user.id === userProfile?.id} // Kan eigen account niet verwijderen
+                              disabled={userItem.id === userProfile?.id} // Kan eigen account niet verwijderen
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>

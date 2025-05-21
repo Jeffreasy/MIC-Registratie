@@ -67,9 +67,12 @@ const IncidentsTab: React.FC<IncidentsTabProps> = ({
       setNewIncidentCategory('fysiek');
       setNewIncidentSeverity(3);
       setNewIncidentRequiresNotification(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating incident type:', err);
-      setError('Kon incident type niet aanmaken: ' + err.message);
+      let errorMessage = 'Kon incident type niet aanmaken.';
+      if (err instanceof Error) { errorMessage = err.message; }
+      else if (typeof err === 'string') { errorMessage = err; }
+      setError('Kon incident type niet aanmaken: ' + errorMessage);
     }
   };
   
@@ -109,9 +112,12 @@ const IncidentsTab: React.FC<IncidentsTabProps> = ({
       ));
       
       setEditingIncidentType(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating incident type:', err);
-      setError('Kon incident type niet bijwerken: ' + err.message);
+      let errorMessage = 'Kon incident type niet bijwerken.';
+      if (err instanceof Error) { errorMessage = err.message; }
+      else if (typeof err === 'string') { errorMessage = err; }
+      setError('Kon incident type niet bijwerken: ' + errorMessage);
     }
   };
 
@@ -128,7 +134,7 @@ const IncidentsTab: React.FC<IncidentsTabProps> = ({
               <Input
                 id="incident-name"
                 value={newIncidentName}
-                onChange={(e) => setNewIncidentName(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewIncidentName(e.target.value)}
                 placeholder="Naam van incident type"
               />
             </div>
@@ -136,7 +142,7 @@ const IncidentsTab: React.FC<IncidentsTabProps> = ({
               <Label htmlFor="incident-category">Categorie</Label>
               <Select
                 value={newIncidentCategory}
-                onValueChange={(value: any) => setNewIncidentCategory(value)}
+                onValueChange={(value: string) => setNewIncidentCategory(value as 'fysiek' | 'verbaal' | 'emotioneel' | 'sociaal')}
               >
                 <SelectTrigger id="incident-category">
                   <SelectValue />
@@ -208,7 +214,7 @@ const IncidentsTab: React.FC<IncidentsTabProps> = ({
                       {editingIncidentType === type.id ? (
                         <Input
                           value={incidentTypes.find(t => t.id === type.id)?.name || ''}
-                          onChange={(e) => {
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                             setIncidentTypes(incidentTypes.map(t => 
                               t.id === type.id ? { ...t, name: e.target.value } : t
                             ));
@@ -222,9 +228,9 @@ const IncidentsTab: React.FC<IncidentsTabProps> = ({
                       {editingIncidentType === type.id ? (
                         <Select
                           value={incidentTypes.find(t => t.id === type.id)?.category || 'fysiek'}
-                          onValueChange={(value: any) => {
+                          onValueChange={(value: string) => {
                             setIncidentTypes(incidentTypes.map(t => 
-                              t.id === type.id ? { ...t, category: value } : t
+                              t.id === type.id ? { ...t, category: value as 'fysiek' | 'verbaal' | 'emotioneel' | 'sociaal' | null } : t
                             ));
                           }}
                         >
@@ -249,7 +255,7 @@ const IncidentsTab: React.FC<IncidentsTabProps> = ({
                           min="1"
                           max="5"
                           value={incidentTypes.find(t => t.id === type.id)?.severity_level || 3}
-                          onChange={(e) => {
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                             setIncidentTypes(incidentTypes.map(t => 
                               t.id === type.id ? { ...t, severity_level: parseInt(e.target.value) || 3 } : t
                             ));
@@ -264,7 +270,7 @@ const IncidentsTab: React.FC<IncidentsTabProps> = ({
                         <input
                           type="checkbox"
                           checked={incidentTypes.find(t => t.id === type.id)?.requires_notification || false}
-                          onChange={(e) => {
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                             setIncidentTypes(incidentTypes.map(t => 
                               t.id === type.id ? { ...t, requires_notification: e.target.checked } : t
                             ));
@@ -278,7 +284,7 @@ const IncidentsTab: React.FC<IncidentsTabProps> = ({
                       {editingIncidentType === type.id ? (
                         <select
                           value={incidentTypes.find(t => t.id === type.id)?.is_active ? 'active' : 'inactive'}
-                          onChange={(e) => {
+                          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                             setIncidentTypes(incidentTypes.map(t => 
                               t.id === type.id ? { ...t, is_active: e.target.value === 'active' } : t
                             ));

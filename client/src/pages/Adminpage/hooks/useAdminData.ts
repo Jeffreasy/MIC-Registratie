@@ -40,9 +40,12 @@ export const useAdminData = () => {
         if (usersError) throw usersError;
         setUsers(usersData || []);
         
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching admin data:', err);
-        setError('Kon gegevens niet laden: ' + err.message);
+        let errorMessage = 'Kon gegevens niet laden.';
+        if (err instanceof Error) { errorMessage = err.message; }
+        else if (typeof err === 'string') { errorMessage = err; }
+        setError('Kon gegevens niet laden: ' + errorMessage);
       } finally {
         setLoading(false);
       }
